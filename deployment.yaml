@@ -36,6 +36,6 @@ spec:
   ports:
     - port: 3000
       targetPort: 3000
-      nodePort: 30080 # Открываем порт наружу для тестов
+      nodePort: 30081 # Изменено с 30080 на 30081
   selector:
     app: srefinal-app
