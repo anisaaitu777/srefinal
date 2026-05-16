@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: srefinal-app
-          image: DOCKERHUB_USERNAME/srefinal-app:latest # Сюда пайплайн подставит твой логин
+          image: docker.io/your-username/srefinal-app:latest
           ports:
             - containerPort: 3000
           resources:
