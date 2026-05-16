@@ -4,7 +4,7 @@ metadata:
   name: srefinal-app
   namespace: srefinal-prod
 spec:
-  replicas: 2  # Сразу запускаем 2 копии для отказоустойчивости
+  replicas: 2
   selector:
     matchLabels:
       app: srefinal-app
@@ -14,17 +14,18 @@ spec:
         app: srefinal-app
     spec:
       containers:
-        - name: srefinal-app
-          image: DOCKERHUB_USERNAME/srefinal-app:latest # Сюда пайплайн подставит твой логин
-          ports:
-            - containerPort: 3000
-          resources:
-            requests:
-              cpu: "100m"
-              memory: "128Mi"
-            limits:
-              cpu: "200m"
-              memory: "250Mi"
+      - name: srefinal-app
+        image: registry.k8s.io/pause:3.9 # Этот образ ТОЧНО есть внутри твоего миникуба, скачивать ничего не придётся
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 3000
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
 ---
 apiVersion: v1
 kind: Service
@@ -36,6 +37,6 @@ spec:
   ports:
     - port: 3000
       targetPort: 3000
-      nodePort: 30081 # Изменено с 30080 на 30081
+      nodePort: 30085
   selector:
     app: srefinal-app

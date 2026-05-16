@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: srefinal-app-monitor
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack
+spec:
+  selector:
+    matchLabels:
+      app: srefinal-app # Проверь, чтобы этот label совпадал с тем, что написано в твоем файле deployment.yaml (в секции Service)
+  namespaceSelector:
+    matchNames:
+      - srefinal-prod
+  endpoints:
+  - port: web # Название порта в твоем Service (обычно web или http)
+    path: /metrics
+    interval: 15s

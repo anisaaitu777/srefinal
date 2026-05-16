@@ -1,0 +1,28 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: srefinal-alerts
+  namespace: monitoring # Отправляем строго туда, где живет Prometheus-stack
+  labels:
+    release: kube-prometheus-stack # Этот лейбл обязателен, чтобы Прометеус подтянул правила
+spec:
+  groups:
+  - name: srefinal.rules
+    rules:
+    - alert: SREFinalAppDown
+      expr: kube_deployment_status_replicas_available{deployment="srefinal-app", namespace="srefinal-prod"} == 0
+      for: 1m
+      labels:
+        severity: critical
+      annotations:
+        summary: "Deployment srefinal-app is DOWN!"
+        description: "В неймсейсе srefinal-prod упали все реплики приложения. Доступность 0%!"
+        
+    - alert: LowTrafficAlert
+      expr: sum(rate(srefinal_requests_total[1m])) == 0
+      for: 2m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Traffic dropped to zero"
+        description: "На приложение srefinal-app не поступают запросы уже больше 2 минут."
