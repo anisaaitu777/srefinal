@@ -1,87 +1,68 @@
-name: FINAL STEP 2 PIPELINE
+name: srefinal CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" ] # Пайплайн запускается при каждом пуше в ветку main
 
 env:
-  REGISTRY: docker.io
-  IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/srefinal-app
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/srefinal-app
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     outputs:
-      image-tag: ${{ steps.image.outputs.tag }}
+      image_tag: ${{ steps.meta.outputs.version }}
+    permissions:
+      contents: read
+      packages: write
 
     steps:
-    - name: Check out repository code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set image tag
-      id: image
-      run: |
-        TAG=latest-${{ github.sha }}
-        echo "tag=$TAG" >> $GITHUB_OUTPUT
-        echo "Image will be tagged as: $TAG"
+      # Выполняем шаг: Automatically build Docker images
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
+      # Выполняем шаг: Push images to a registry (Авторизация в GitHub Packages)
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=short
 
-    - name: Build and Push Docker Image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: |
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-          ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.image.outputs.tag }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      # Собираем и пушим образ с уникальным тегом (хэшем коммита)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-  deploy-to-cluster:
+  deploy:
     needs: build-and-push
-    runs-on: ubuntu-latest
-    
+    # Этот шаг будет выполняться на твоем компе через локальный раннер
+    runs-on: self-hosted 
+
     steps:
-    - name: Check out repository code
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-    - name: Set up kubectl
-      uses: azure/setup-kubectl@v3
-      with:
-        version: 'latest'
-
-    - name: Configure kubectl
-      run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-        chmod 600 $HOME/.kube/config
-
-    - name: Verify cluster connection
-      run: kubectl cluster-info
-
-    - name: Update deployment image
-      run: |
-        kubectl set image deployment/srefinal-app \
-          srefinal-app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image-tag }} \
-          -n srefinal-prod || true
-
-    - name: Apply deployment manifests
-      run: |
-        kubectl apply -f deployment.yaml
-
-    - name: Check rollout status
-      run: |
-        kubectl rollout status deployment/srefinal-app -n srefinal-prod --timeout=5m
-
-    - name: Verify deployment
-      run: |
-        kubectl get deployments,pods,services -n srefinal-prod
+      # Выполняем шаг: Automatically deploy updates to the cluster
+      - name: Deploy to Local Kubernetes Cluster
+        run: |
+          # Динамически подставляем новый тег образа в манифест и катим в кластер
+          $IMAGE = "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image_tag }}"
+          (Get-Content ./k8s/deployment.yaml) -replace 'image: srefinal-app:v1', "image: $IMAGE" | Set-Content ./k8s/deployment.yaml
+          kubectl apply -f ./k8s/ -n srefinal-prod
