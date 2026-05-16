@@ -1,4 +1,4 @@
-name: CI/CD Production Pipeline
+name: FINAL STEP 2 PIPELINE
 
 on:
   push:
