@@ -60,8 +60,11 @@ jobs:
 
       # Выполняем шаг: Automatically deploy updates to the cluster
       - name: Deploy to Local Kubernetes Cluster
-        shell: powershell # <-- ДОБАВИЛИ ЭТУ СТРОЧКУ, чтобы Windows всё поняла!
+        shell: powershell
         run: |
+          # Меняем тег прямо в корневом файле deployment.yaml
           $IMAGE = "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image_tag }}"
-          (Get-Content ./k8s/deployment.yaml) -replace 'image: srefinal-app:v1', "image: `$IMAGE" | Set-Content ./k8s/deployment.yaml
-          kubectl apply -f ./k8s/ -n srefinal-prod
+          (Get-Content ./deployment.yaml) -replace 'image: srefinal-app:v1', "image: `$IMAGE" | Set-Content ./deployment.yaml
+          
+          # Применяем манифест из корня
+          kubectl apply -f ./deployment.yaml -n srefinal-prod
