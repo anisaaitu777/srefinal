@@ -52,7 +52,6 @@ jobs:
 
   deploy:
     needs: build-and-push
-    # Этот шаг будет выполняться на твоем компе через локальный раннер
     runs-on: self-hosted 
 
     steps:
@@ -61,8 +60,8 @@ jobs:
 
       # Выполняем шаг: Automatically deploy updates to the cluster
       - name: Deploy to Local Kubernetes Cluster
+        shell: powershell # <-- ДОБАВИЛИ ЭТУ СТРОЧКУ, чтобы Windows всё поняла!
         run: |
-          # Динамически подставляем новый тег образа в манифест и катим в кластер
           $IMAGE = "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image_tag }}"
-          (Get-Content ./k8s/deployment.yaml) -replace 'image: srefinal-app:v1', "image: $IMAGE" | Set-Content ./k8s/deployment.yaml
+          (Get-Content ./k8s/deployment.yaml) -replace 'image: srefinal-app:v1', "image: `$IMAGE" | Set-Content ./k8s/deployment.yaml
           kubectl apply -f ./k8s/ -n srefinal-prod
