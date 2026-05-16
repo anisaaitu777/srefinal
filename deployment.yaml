@@ -1,0 +1,41 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: srefinal-app
+  namespace: srefinal-prod
+spec:
+  replicas: 2  # Сразу запускаем 2 копии для отказоустойчивости
+  selector:
+    matchLabels:
+      app: srefinal-app
+  template:
+    metadata:
+      labels:
+        app: srefinal-app
+    spec:
+      containers:
+        - name: srefinal-app
+          image: DOCKERHUB_USERNAME/srefinal-app:latest # Сюда пайплайн подставит твой логин
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "200m"
+              memory: "250Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: srefinal-service
+  namespace: srefinal-prod
+spec:
+  type: NodePort
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30080 # Открываем порт наружу для тестов
+  selector:
+    app: srefinal-app
