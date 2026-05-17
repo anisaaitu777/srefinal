@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: srefinal-app
+  namespace: srefinal-prod
+  labels:
+    app: srefinal-app
+spec:
+  replicas: 2 # Стартуем с двух подов для отказоустойчивости (требование PRR)
+  selector:
+    matchLabels:
+      app: srefinal-app
+  template:
+    metadata:
+      labels:
+        app: srefinal-app
+    spec:
+      containers:
+      - name: srefinal-container
+        image: docker.io/aaniisssaaa/srefinal-app:v1 # Твой реальный образ из Docker Hub
+        imagePullPolicy: Always # Заставляем Кубернетес всегда проверять и качать свежий образ из сети
+        ports:
+        - containerPort: 8000 # Порт, на котором крутится твой Uvicorn/FastAPI
+          name: http-web
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: srefinal-service
+  namespace: srefinal-prod
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 32000
+    name: http-web
+  selector:
+    app: srefinal-app

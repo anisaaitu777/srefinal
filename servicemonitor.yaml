@@ -2,17 +2,17 @@ apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
   name: srefinal-app-monitor
-  namespace: monitoring
+  namespace: monitoring # Кладем в мониторинг к Прометеусу
   labels:
-    release: kube-prometheus-stack
+    release: kube-prometheus-stack # Говорим Прометеусу забрать этот монитор
 spec:
   selector:
     matchLabels:
-      app: srefinal-app # Проверь, чтобы этот label совпадал с тем, что написано в твоем файле deployment.yaml (в секции Service)
+      app: srefinal-app # Ищем наш сайт
   namespaceSelector:
     matchNames:
-      - srefinal-prod
+      - srefinal-prod # Ищем в пространстве продакшена
   endpoints:
-  - port: web # Название порта в твоем Service (обычно web или http)
+  - port: web
     path: /metrics
     interval: 15s
